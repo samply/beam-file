@@ -13,7 +13,7 @@ use crate::{FileMeta, BEAM_CLIENT, CONFIG};
 
 pub async fn serve(addr: &SocketAddr, api_key: &str) -> anyhow::Result<()> {
     let app = Router::new()
-        .route("/send/:to", post(send_file))
+        .route("/send/{to}", post(send_file))
         .with_state(Arc::from(api_key));
     axum::serve(TcpListener::bind(&addr).await? ,app.into_make_service())
         .with_graceful_shutdown(async { tokio::signal::ctrl_c().await.unwrap() })
