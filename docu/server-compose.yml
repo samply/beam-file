@@ -1,0 +1,45 @@
+
+services:
+  echo:
+    image: mendhak/http-https-echo
+    environment:
+      - HTTP_PORT=7070
+
+  uploader:
+    build:
+      context: ../
+      dockerfile: ../Dockerfile.server
+    image: samply/beam-file:server
+    container_name: uploader
+    command: ["server"]
+    environment:
+      - BEAM_ID=app1.proxy1.broker
+      - BEAM_SECRET=App1Secret
+      - BEAM_URL=http://proxy1:8083
+      - BIND_ADDR=0.0.0.0:8085
+      - API_KEY=SuperSecretApiKey
+    ports:
+      - 8085:8085
+    networks:
+      - dev_default
+      - default
+  
+  downloader:
+    build:
+      context: ../
+      dockerfile: Dockerfile
+    image: samply/beam-file
+    command: ["receive", "print"]
+    environment:
+      - BEAM_ID=app1.proxy2.broker
+      - BEAM_SECRET=App1Secret
+      - BEAM_URL=http://proxy2:8082
+    depends_on:
+      - echo
+    networks:
+      - dev_default
+      - default
+    
+networks:
+  dev_default:
+    external: true

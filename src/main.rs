@@ -1,12 +1,11 @@
 mod config;
-#[cfg(feature = "server")]
-mod server;
+mod features;
 
 use std::{path::Path, process::ExitCode, time::SystemTime};
 
 use beam_lib::{AppId, BeamClient, BlockingOptions, SocketTask};
 use clap::Parser;
-use config::{Config, SendArgs, Mode, ReceiveMode};
+use config::{Config, Mode, ReceiveMode, SendArgs};
 use futures_util::{FutureExt, Stream, StreamExt, TryFutureExt, TryStreamExt};
 use once_cell::sync::Lazy;
 use reqwest::{Client, Upgraded, Url};
@@ -14,8 +13,10 @@ use serde::{Deserialize, Serialize};
 use sync_wrapper::SyncStream;
 use tokio::io::AsyncRead;
 use tokio_util::io::ReaderStream;
-use reqwest::header::{HeaderName, HeaderValue, HeaderMap};
+use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use anyhow::{anyhow, bail, Context, Result};
+#[cfg(feature = "server")]
+use features::server;
 
 pub static CONFIG: Lazy<Config> = Lazy::new(Config::parse);
 

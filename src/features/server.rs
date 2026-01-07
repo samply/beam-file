@@ -33,10 +33,12 @@ async fn send_file(
     if auth.password() != api_key.as_ref() {
         return Err(StatusCode::UNAUTHORIZED);
     }
-    let to = AppId::new_unchecked(format!(
-        "{other_proxy_name}.{}",
-        CONFIG.beam_id.as_ref().splitn(3, '.').nth(2).expect("Invalid app id")
-    ));
+    let mut parts = CONFIG.beam_id.as_ref().splitn(3, '.');
+    let app = parts.next().unwrap();
+    let _this_proxy = parts.next().unwrap();
+    let broker = parts.next().unwrap();
+
+    let to = AppId::new_unchecked(format!("{app}.{other_proxy_name}.{broker}"));
     let mut conn = BEAM_CLIENT
         .create_socket_with_metadata(&to, FileMeta {
             meta: headers.get("metadata").and_then(|v| serde_json::from_slice(v.as_bytes()).map_err(|e| eprintln!("Failed to deserialize metadata: {e}. Skipping metadata")).ok()),
