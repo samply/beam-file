@@ -1,7 +1,7 @@
 use std::{convert::Infallible, path::PathBuf};
 
 use beam_lib::{reqwest::Url, AppId};
-use clap::{Parser, Subcommand, ValueHint, Args};
+use clap::{Args, Parser, Subcommand, ValueHint};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -37,7 +37,7 @@ pub enum Mode {
 
         /// Only receive count files
         #[clap(long, short = 'n', default_value_t = u32::MAX, hide_default_value = true)]
-        count: u32
+        count: u32,
     },
     #[cfg(feature = "server")]
     Server {
@@ -48,7 +48,7 @@ pub enum Mode {
         /// Api key required for uploading files
         #[clap(env, long)]
         api_key: String,
-    }
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, Args)]
@@ -64,12 +64,12 @@ pub struct SendArgs {
 
     /// A suggestion for the new name the receiver should use. Will default to the uploaded files name if it is not read from stdin.
     #[clap(long)]
-    #[serde(skip_serializing_if  = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     name: Option<String>,
 
     /// Additional metadata for the file
     #[clap(long)]
-    #[serde(skip_serializing_if  = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub meta: Option<Value>,
 }
 
@@ -84,7 +84,7 @@ impl SendArgs {
     pub fn to_file_meta(&self) -> FileMeta {
         FileMeta {
             suggested_name: self.get_suggested_name().map(ToOwned::to_owned),
-            meta: self.meta.clone()
+            meta: self.meta.clone(),
         }
     }
 }
@@ -99,11 +99,11 @@ pub enum ReceiveMode {
 
         /// Naming scheme used to save files. %t -> unix timestamp %f beam app id e.g. app1.proxy2 %n suggested name from upload see send arguments
         #[clap(long, short = 'p', default_value = "%f_%t")]
-        naming: String
+        naming: String,
     },
     Callback {
         /// A url to an endpoint that will be called when we are receiving a new file
         #[clap(value_hint = ValueHint::Url)]
         url: Url,
-    }
+    },
 }
