@@ -1,8 +1,0 @@
-FROM rust:1.83-bookworm AS builder
-WORKDIR /src
-COPY . .
-RUN cargo build --release --features server
-
-FROM gcr.io/distroless/cc-debian12
-COPY --from=builder /src/target/release/beam-file /usr/local/bin/beam-file
-ENTRYPOINT ["/usr/local/bin/beam-file"]
