@@ -6,17 +6,17 @@ pub async fn send_file(
     mut stream: impl AsyncRead + Unpin,
     meta @ SendArgs { to, .. }: &SendArgs,
 ) -> anyhow::Result<()> {
-    let to = AppId::new_unchecked(format!(
+    let full_to = AppId::new_unchecked(format!(
         "{to}.{}",
         CONFIG
             .beam_id
             .as_ref()
-            .splitn(3, '.')
-            .nth(2)
-            .expect("Invalid app id")
+            .rsplit('.')
+            .next()
+            .expect("AppId invalid"),
     ));
     let mut conn = BEAM_CLIENT
-        .create_socket_with_metadata(&to, meta.to_file_meta())
+        .create_socket_with_metadata(&full_to, meta.to_file_meta())
         .await?;
     tokio::io::copy(&mut stream, &mut conn).await?;
     Ok(())
