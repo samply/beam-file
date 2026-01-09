@@ -20,7 +20,7 @@ services:
   ### Site A ###
   uploader:
     image: samply/beam-file
-    container_name: uploader
+    container_name: sender
     environment:
       - BEAM_ID=app1.proxy1.broker
       - BEAM_SECRET=App1Secret
@@ -38,6 +38,7 @@ services:
   ### Site B ###
   downloader:
     image: samply/beam-file
+    container_name: receiver
     environment:
       - BEAM_ID=app1.proxy2.broker
       - BEAM_SECRET=App1Secret
@@ -64,7 +65,7 @@ networks:
 After starting this compose process with `docker compose up` we should now be able to upload a file to the uploader at Site A and see its content being echoed by the http echo server located at Site B.
 To do this we will be using curl:
 ```bash
-curl -v -X POST -F "data=@Readme.md" -u ":SuperSecretApiKey"  http://localhost:8085/send/proxy2
+curl -v -X POST -F "data=@Readme.md" -u ":SuperSecretApiKey"  http://localhost:8085/send/app1.proxy2
 ```
 
 If everything went well there should now be a logs message of the Readme emitted by the echo server.

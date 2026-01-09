@@ -1,11 +1,22 @@
-use std::{convert::Infallible, path::PathBuf};
-
-use beam_lib::{reqwest::Url, AppId};
+use std::path::PathBuf;
+use anyhow::anyhow;
+use beam_lib::{reqwest::Url, AppId, BeamClient};
 use clap::{Args, Parser, Subcommand, ValueHint};
+use once_cell::sync::Lazy;
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::{validate_filename, FileMeta};
+pub static CONFIG: Lazy<Config> = Lazy::new(Config::parse);
+
+pub static BEAM_CLIENT: Lazy<BeamClient> = Lazy::new(|| {
+    BeamClient::new(
+        &CONFIG.beam_id,
+        &CONFIG.beam_secret,
+        CONFIG.beam_url.clone(),
+    )
+});
+pub static CLIENT: Lazy<Client> = Lazy::new(Client::new);
 
 /// Samply.Beam.File
 #[derive(Debug, Parser)]
@@ -19,7 +30,7 @@ pub struct Config {
     pub beam_secret: String,
 
     /// The app id of this application
-    #[clap(long, env, value_parser=|id: &str| Ok::<_, Infallible>(AppId::new_unchecked(id)))]
+    #[clap(long, env, value_parser = parse_beam_id)]
     pub beam_id: AppId,
 
     #[clap(subcommand)]
@@ -106,4 +117,42 @@ pub enum ReceiveMode {
         #[clap(value_hint = ValueHint::Url)]
         url: Url,
     },
+}
+
+fn parse_beam_id(id: &str) -> Result<AppId, String> {
+    match id.split('.').collect::<Vec<_>>().as_slice() {
+        [app, proxy, broker] if !app.is_empty() && !proxy.is_empty() && !broker.is_empty() => {
+            Ok(AppId::new_unchecked(id))
+        }
+        _ => Err("beam-id must be <app>.<proxy>.<broker>".into()),
+    }
+}
+
+fn validate_filename(name: &str) -> anyhow::Result<&str> {
+    if name
+        .chars()
+        .all(|c| c.is_alphanumeric() || ['_', '.', '-'].contains(&c))
+    {
+        Ok(name)
+    } else {
+        Err(anyhow!("Invalid filename: {name}"))
+    }
+}
+
+fn deserialize_filename<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> anyhow::Result<Option<String>, D::Error> {
+    let s = Option::<String>::deserialize(deserializer)?;
+    if let Some(ref f) = s {
+        validate_filename(f).map_err(serde::de::Error::custom)?;
+    }
+    Ok(s)
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct FileMeta {
+    #[serde(deserialize_with = "deserialize_filename")]
+    pub suggested_name: Option<String>,
+
+    pub meta: Option<serde_json::Value>,
 }
