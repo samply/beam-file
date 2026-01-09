@@ -4,7 +4,13 @@ version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "beam_file"
+path = "src/lib.rs"
+
+[[bin]]
+name = "beam-file"
+path = "src/main.rs"
 
 [dependencies]
 axum = { version = "0.8", optional = true}
@@ -21,6 +27,8 @@ tokio-util = { version = "0.7", features = ["io"] }
 futures-util = { version = "0.3", default-features = false, features = ["std"] }
 anyhow = "1"
 sync_wrapper = { version = "1", features = ["futures"] }
+tracing-subscriber = "0.3.22"
+tracing = "0.1.44"
 
 [features]
 server = ["dep:axum", "dep:axum-extra"]
