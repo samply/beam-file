@@ -1,6 +1,7 @@
 use crate::utils::config::{FileMeta, CLIENT};
 use anyhow::{bail, Context};
 use beam_lib::SocketTask;
+use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use reqwest::Url;
 use std::path::Path;
 use std::time::SystemTime;
@@ -8,7 +9,6 @@ use sync_wrapper::SyncStream;
 use tokio::io::AsyncRead;
 use tokio_util::io::ReaderStream;
 use tracing::info;
-use reqwest::header::{HeaderName, HeaderValue, HeaderMap};
 
 pub async fn save_file(
     dir: &Path,

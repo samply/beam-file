@@ -1,4 +1,3 @@
-use std::path::PathBuf;
 use anyhow::anyhow;
 use beam_lib::{reqwest::Url, AppId, BeamClient};
 use clap::{Args, Parser, Subcommand, ValueHint};
@@ -6,6 +5,7 @@ use once_cell::sync::Lazy;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::path::PathBuf;
 
 pub static CONFIG: Lazy<Config> = Lazy::new(Config::parse);
 

@@ -1,15 +1,15 @@
 use anyhow::Context;
 use beam_file::receiver::default::{forward_file, print_file, save_file};
 use beam_file::sender::default::send_file;
+#[cfg(feature = "server")]
+use beam_file::sender::server;
 use beam_file::utils::config::{Mode, ReceiveMode, BEAM_CLIENT, CONFIG};
 use beam_lib::{BlockingOptions, SocketTask};
+use futures_util::{FutureExt, Stream, StreamExt, TryFutureExt, TryStreamExt};
 use once_cell::sync::Lazy;
 use reqwest::Upgraded;
 use std::process::ExitCode;
 use tracing::{error, info};
-use futures_util::{FutureExt, Stream, TryFutureExt, TryStreamExt, StreamExt};
-#[cfg(feature = "server")]
-use beam_file::sender::server;
 
 #[tokio::main]
 async fn main() -> ExitCode {
