@@ -148,11 +148,3 @@ fn deserialize_filename<'de, D: serde::Deserializer<'de>>(
     }
     Ok(s)
 }
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct FileMeta {
-    #[serde(deserialize_with = "deserialize_filename")]
-    pub suggested_name: Option<String>,
-
-    pub meta: Option<serde_json::Value>,
-}

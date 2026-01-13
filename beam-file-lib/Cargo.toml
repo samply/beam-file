@@ -1,0 +1,16 @@
+[package]
+name = "beam-file-lib"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+reqwest = { workspace = true }
+tokio = { workspace = true }
+beam-lib = { workspace = true }
+serde_json = { workspace = true }
+serde = { workspace = true }
+tokio-util = { version = "0.7", features = ["io"] }
+anyhow = {workspace = true}
+sync_wrapper = { version = "1", features = ["futures"] }
+tracing-subscriber = { workspace = true }
+tracing = { workspace = true }
