@@ -1,30 +1,51 @@
 use std::process::ExitCode;
-use futures_util::FutureExt;
-use beam_file_lib::sender::default::send_file;
-use crate::utils::config::{Mode, CONFIG};
+use beam_lib::BeamClient;
+use futures_util::{FutureExt, TryFutureExt, TryStreamExt, StreamExt};
+use once_cell::sync::Lazy;
+use reqwest::Client;
+use tracing::{error, info};
+use beam_file_lib::receiver::{forward_file, print_file, save_file};
+use beam_file_lib::sender::send_file;
+use beam_file_lib::utils::beam::{connect_socket, stream_tasks};
+use crate::utils::config::{Config, Mode, ReceiveMode};
+use clap::Parser;
+#[cfg(feature = "server")]
+use crate::utils::server;
 
 mod utils;
 
+pub static CONFIG: Lazy<Config> = Lazy::new(Config::parse);
+pub static BEAM_CLIENT: Lazy<BeamClient> = Lazy::new(|| {
+    BeamClient::new(
+        &CONFIG.beam_id,
+        &CONFIG.beam_secret,
+        CONFIG.beam_url.clone(),
+    )
+});
+
+pub static CLIENT: Lazy<Client> = Lazy::new(Client::new);
 #[tokio::main]
 async fn main() -> ExitCode {
     tracing_subscriber::fmt::init();
     let work = match &CONFIG.mode {
         Mode::Send(send_args) if send_args.file.to_string_lossy() == "-" => {
-            send_file(tokio::io::stdin(), send_args).boxed()
+            send_file(&BEAM_CLIENT, &CONFIG.beam_id, tokio::io::stdin(), send_args.to_spec() ).boxed()
         }
-        Mode::Send(send_args) => tokio::fs::File::open(&send_args.file)
-            .err_into()
-            .and_then(|f| send_file(f, send_args))
-            .boxed(),
-        Mode::Receive { count, mode } => stream_tasks()
-            .and_then(connect_socket)
+        Mode::Send(send_args) => {
+            tokio::fs::File::open(&send_args.file)
+                .err_into()
+                .and_then(|f| send_file(&BEAM_CLIENT, &CONFIG.beam_id, f, send_args.to_spec()))
+                .boxed()
+        },
+        Mode::Receive { count, mode } => stream_tasks(&BEAM_CLIENT)
+            .and_then(|task| connect_socket(task, &BEAM_CLIENT))
             .inspect_ok(|(task, _)| error!("Receiving file from: {}", task.from))
             .and_then(move |(task, inc)| match mode {
                 ReceiveMode::Print => print_file(task, inc).boxed(),
                 ReceiveMode::Save { outdir, naming } => {
                     save_file(outdir, task, inc, naming).boxed()
                 }
-                ReceiveMode::Callback { url } => forward_file(task, inc, url).boxed(),
+                ReceiveMode::Callback { url } => forward_file(task, inc, url, &CLIENT).boxed(),
             })
             .take(*count as usize)
             .for_each(|v| {
@@ -36,7 +57,12 @@ async fn main() -> ExitCode {
             .map(Ok)
             .boxed(),
         #[cfg(feature = "server")]
-        Mode::Server { bind_addr, api_key } => server::serve(bind_addr, api_key).boxed(),
+        Mode::Server { bind_addr, api_key } => server::serve(
+            bind_addr, 
+            api_key, 
+            &BEAM_CLIENT, 
+            &CONFIG.beam_id
+        ).boxed(),
     };
     let result = tokio::select! {
         res = work => res,
@@ -51,29 +77,4 @@ async fn main() -> ExitCode {
     } else {
         ExitCode::SUCCESS
     }
-}
-
-pub fn stream_tasks() -> impl Stream<Item = anyhow::Result<SocketTask>> {
-    static BLOCK: Lazy<BlockingOptions> = Lazy::new(|| BlockingOptions::from_count(1));
-    futures_util::stream::repeat_with(move || BEAM_CLIENT.get_socket_tasks(&BLOCK)).filter_map(
-        |v| async {
-            match v.await {
-                Ok(mut v) => Some(Ok(v.pop()?)),
-                Err(e) => Some(
-                    Err(anyhow::Error::from(e)).context("Failed to get socket tasks from beam"),
-                ),
-            }
-        },
-    )
-}
-
-pub async fn connect_socket(socket_task: SocketTask) -> anyhow::Result<(SocketTask, Upgraded)> {
-    let id = socket_task.id;
-    Ok((
-        socket_task,
-        BEAM_CLIENT
-            .connect_socket(&id)
-            .await
-            .with_context(|| format!("Failed to connect to socket {id}"))?,
-    ))
 }

@@ -8,25 +8,41 @@ use axum_extra::{
     headers::{authorization, Authorization},
     TypedHeader,
 };
-use beam_lib::AppId;
+use beam_lib::{AppId, BeamClient};
 use futures_util::TryStreamExt as _;
 use std::{io, net::SocketAddr, sync::Arc};
 use tokio::net::TcpListener;
-use tokio_util::io::StreamReader;
 use tracing::error;
-use beam_file_lib::sender::server::send_file;
 use beam_file_lib::utils::config::FileMeta;
-use crate::utils::config::{BEAM_CLIENT, CONFIG};
+use tokio_util::io::StreamReader;
 
-type AppState = Arc<str>;
+#[derive(Clone)]
+struct AppState {
+    api_key: Arc<str>,
+    beam_client: Arc<BeamClient>,
+    beam_id: AppId,
+}
 
-pub async fn serve(addr: &SocketAddr, api_key: &str) -> anyhow::Result<()> {
+pub async fn serve(
+    addr: &SocketAddr,
+    api_key: &str,
+    beam_client: &BeamClient,
+    beam_id: &AppId,
+) -> anyhow::Result<()> {
+    let state = AppState {
+        api_key: Arc::from(api_key),
+        beam_client: Arc::new(beam_client.clone()),
+        beam_id: beam_id.clone(),
+    };
+
     let app = Router::new()
         .route("/send/{to}", post(send_file))
-        .with_state(Arc::from(api_key));
-    axum::serve(TcpListener::bind(&addr).await?, app.into_make_service())
+        .with_state(state);
+
+    axum::serve(TcpListener::bind(addr).await?, app.into_make_service())
         .with_graceful_shutdown(async { tokio::signal::ctrl_c().await.unwrap() })
         .await?;
+
     Ok(())
 }
 
@@ -34,22 +50,21 @@ async fn send_file(
     Path(other_proxy_name): Path<String>,
     auth: TypedHeader<Authorization<authorization::Basic>>,
     headers: HeaderMap,
-    State(api_key): State<AppState>,
+    State(state): State<AppState>,
     req: Request,
 ) -> Result<(), StatusCode> {
-    if auth.password() != api_key.as_ref() {
+    if auth.password() != state.api_key.as_ref() {
         return Err(StatusCode::UNAUTHORIZED);
     }
     let to = AppId::new_unchecked(format!(
         "{other_proxy_name}.{}",
-        CONFIG
-            .beam_id
+        state.beam_id
             .as_ref()
-            .rsplit('.')
-            .next()
-            .expect("AppId invalid"),
+            .splitn(3, '.')
+            .nth(2)
+            .expect("Invalid app id")
     ));
-    let mut conn = BEAM_CLIENT
+    let mut conn = state.beam_client
         .create_socket_with_metadata(
             &to,
             FileMeta {

@@ -1,2 +1,3 @@
 pub mod config;
-mod server;
+#[cfg(feature = "server")]
+pub mod server;

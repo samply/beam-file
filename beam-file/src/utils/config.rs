@@ -1,22 +1,11 @@
 use anyhow::anyhow;
-use beam_lib::{reqwest::Url, AppId, BeamClient};
+use beam_lib::{reqwest::Url, AppId};
 use clap::{Args, Parser, Subcommand, ValueHint};
-use once_cell::sync::Lazy;
-use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::path::PathBuf;
+use beam_file_lib::utils::config::{FileMeta, SendSpec};
 
-pub static CONFIG: Lazy<Config> = Lazy::new(Config::parse);
-
-pub static BEAM_CLIENT: Lazy<BeamClient> = Lazy::new(|| {
-    BeamClient::new(
-        &CONFIG.beam_id,
-        &CONFIG.beam_secret,
-        CONFIG.beam_url.clone(),
-    )
-});
-pub static CLIENT: Lazy<Client> = Lazy::new(Client::new);
 
 /// Samply.Beam.File
 #[derive(Debug, Parser)]
@@ -85,7 +74,15 @@ pub struct SendArgs {
 }
 
 impl SendArgs {
-    fn get_suggested_name(&self) -> Option<&str> {
+    pub fn to_spec(&self) -> SendSpec {
+        SendSpec {
+            to: self.to.clone(),
+            file: self.file.clone(),
+            name: self.name.clone(),
+            meta: self.meta.clone(),
+        }
+    }
+        fn get_suggested_name(&self) -> Option<&str> {
         self.name
             .as_deref()
             .or_else(|| (self.file.as_os_str() != "-").then_some(self.file.file_name()?.to_str()?))

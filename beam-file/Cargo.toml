@@ -14,16 +14,16 @@ axum-extra = { version = "0.12", optional = true, features = ["typed-header"]}
 reqwest = { workspace = true }
 clap = { version = "4.5", features = ["derive", "env"] }
 tokio = { workspace = true }
+tokio-util = { workspace = true }
 once_cell = { workspace = true }
 beam-lib = { workspace = true }
 serde_json = { workspace = true }
 serde = { workspace = true }
-tokio-util = { version = "0.7", features = ["io"] }
-futures-util = { version = "0.3", default-features = false, features = ["std"] }
 anyhow = {workspace = true}
 tracing-subscriber = { workspace = true }
 tracing = { workspace = true }
 beam-file-lib = { path = "../beam-file-lib" }
+futures-util = { workspace = true }
 
 [features]
 server = ["dep:axum", "dep:axum-extra"]

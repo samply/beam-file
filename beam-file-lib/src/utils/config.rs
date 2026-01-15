@@ -3,21 +3,14 @@ use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-#[derive(Debug, Clone)]
-pub struct BeamRuntime {
-    pub beam_url: reqwest::Url,
-    pub beam_secret: String,
-    pub beam_id: beam_lib::AppId,
-}
-
 #[derive(Debug, Clone, Default)]
-pub struct Context {
+pub struct SendSpec {
     /// Name of the receiving beam app without broker id e.g. app1.proxy2
     pub to: String,
     /// Name of the file to be read or '-' to read from stdin
     pub file: PathBuf,
     /// A suggestion for the new name the receiver should use. Will default to the uploaded files name if it is not read from stdin.
-    name: Option<String>,
+    pub name: Option<String>,
     /// Additional metadata for the file
     pub meta: Option<Value>,
 }
@@ -29,7 +22,7 @@ pub struct FileMeta {
 
     pub meta: Option<serde_json::Value>,
 }
-impl Context {
+impl SendSpec {
     pub fn get_suggested_name(&self) -> Option<&str> {
         self.name
             .as_deref()
