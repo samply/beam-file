@@ -1,11 +1,11 @@
-use std::{convert::Infallible, path::PathBuf};
-
+use anyhow::anyhow;
 use beam_lib::{reqwest::Url, AppId};
-use clap::{Parser, Subcommand, ValueHint, Args};
+use clap::{Args, Parser, Subcommand, ValueHint};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::path::PathBuf;
+use beam_file_lib::utils::config::{FileMeta, SendSpec};
 
-use crate::{validate_filename, FileMeta};
 
 /// Samply.Beam.File
 #[derive(Debug, Parser)]
@@ -19,7 +19,7 @@ pub struct Config {
     pub beam_secret: String,
 
     /// The app id of this application
-    #[clap(long, env, value_parser=|id: &str| Ok::<_, Infallible>(AppId::new_unchecked(id)))]
+    #[clap(long, env, value_parser = parse_beam_id)]
     pub beam_id: AppId,
 
     #[clap(subcommand)]
@@ -37,7 +37,7 @@ pub enum Mode {
 
         /// Only receive count files
         #[clap(long, short = 'n', default_value_t = u32::MAX, hide_default_value = true)]
-        count: u32
+        count: u32,
     },
     #[cfg(feature = "server")]
     Server {
@@ -48,7 +48,7 @@ pub enum Mode {
         /// Api key required for uploading files
         #[clap(env, long)]
         api_key: String,
-    }
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, Args)]
@@ -64,17 +64,25 @@ pub struct SendArgs {
 
     /// A suggestion for the new name the receiver should use. Will default to the uploaded files name if it is not read from stdin.
     #[clap(long)]
-    #[serde(skip_serializing_if  = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     name: Option<String>,
 
     /// Additional metadata for the file
     #[clap(long)]
-    #[serde(skip_serializing_if  = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub meta: Option<Value>,
 }
 
 impl SendArgs {
-    fn get_suggested_name(&self) -> Option<&str> {
+    pub fn to_spec(&self) -> SendSpec {
+        SendSpec {
+            to: self.to.clone(),
+            file: self.file.clone(),
+            name: self.name.clone(),
+            meta: self.meta.clone(),
+        }
+    }
+        fn get_suggested_name(&self) -> Option<&str> {
         self.name
             .as_deref()
             .or_else(|| (self.file.as_os_str() != "-").then_some(self.file.file_name()?.to_str()?))
@@ -84,7 +92,7 @@ impl SendArgs {
     pub fn to_file_meta(&self) -> FileMeta {
         FileMeta {
             suggested_name: self.get_suggested_name().map(ToOwned::to_owned),
-            meta: self.meta.clone()
+            meta: self.meta.clone(),
         }
     }
 }
@@ -99,11 +107,41 @@ pub enum ReceiveMode {
 
         /// Naming scheme used to save files. %t -> unix timestamp %f beam app id e.g. app1.proxy2 %n suggested name from upload see send arguments
         #[clap(long, short = 'p', default_value = "%f_%t")]
-        naming: String
+        naming: String,
     },
     Callback {
         /// A url to an endpoint that will be called when we are receiving a new file
         #[clap(value_hint = ValueHint::Url)]
         url: Url,
+    },
+}
+
+fn parse_beam_id(id: &str) -> Result<AppId, String> {
+    match id.split('.').collect::<Vec<_>>().as_slice() {
+        [app, proxy, broker] if !app.is_empty() && !proxy.is_empty() && !broker.is_empty() => {
+            Ok(AppId::new_unchecked(id))
+        }
+        _ => Err("beam-id must be <app>.<proxy>.<broker>".into()),
     }
+}
+
+fn validate_filename(name: &str) -> anyhow::Result<&str> {
+    if name
+        .chars()
+        .all(|c| c.is_alphanumeric() || ['_', '.', '-'].contains(&c))
+    {
+        Ok(name)
+    } else {
+        Err(anyhow!("Invalid filename: {name}"))
+    }
+}
+
+fn deserialize_filename<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> anyhow::Result<Option<String>, D::Error> {
+    let s = Option::<String>::deserialize(deserializer)?;
+    if let Some(ref f) = s {
+        validate_filename(f).map_err(serde::de::Error::custom)?;
+    }
+    Ok(s)
 }

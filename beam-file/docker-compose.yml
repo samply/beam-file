@@ -8,7 +8,7 @@ services:
   uploader:
     build: .
     image: samply/beam-file
-    container_name: uploader
+    container_name: sender
     environment:
       - BEAM_ID=app1.proxy1.broker
       - BEAM_SECRET=App1Secret
@@ -24,6 +24,7 @@ services:
   downloader:
     build: .
     image: samply/beam-file
+    container_name: receiver
     environment:
       - BEAM_ID=app1.proxy2.broker
       - BEAM_SECRET=App1Secret
