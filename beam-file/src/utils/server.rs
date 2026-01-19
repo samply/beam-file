@@ -8,13 +8,13 @@ use axum_extra::{
     headers::{authorization, Authorization},
     TypedHeader,
 };
+use beam_file_lib::utils::config::FileMeta;
 use beam_lib::{AppId, BeamClient};
 use futures_util::TryStreamExt as _;
 use std::{io, net::SocketAddr, sync::Arc};
 use tokio::net::TcpListener;
-use tracing::error;
-use beam_file_lib::utils::config::FileMeta;
 use tokio_util::io::StreamReader;
+use tracing::error;
 
 #[derive(Clone)]
 struct AppState {
@@ -58,13 +58,15 @@ async fn send_file(
     }
     let to = AppId::new_unchecked(format!(
         "{other_proxy_name}.{}",
-        state.beam_id
+        state
+            .beam_id
             .as_ref()
             .splitn(3, '.')
             .nth(2)
             .expect("Invalid app id")
     ));
-    let mut conn = state.beam_client
+    let mut conn = state
+        .beam_client
         .create_socket_with_metadata(
             &to,
             FileMeta {

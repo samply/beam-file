@@ -1,11 +1,10 @@
 use anyhow::anyhow;
+use beam_file_lib::utils::config::{FileMeta, SendSpec};
 use beam_lib::{reqwest::Url, AppId};
 use clap::{Args, Parser, Subcommand, ValueHint};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::path::PathBuf;
-use beam_file_lib::utils::config::{FileMeta, SendSpec};
-
 
 /// Samply.Beam.File
 #[derive(Debug, Parser)]
@@ -82,7 +81,7 @@ impl SendArgs {
             meta: self.meta.clone(),
         }
     }
-        fn get_suggested_name(&self) -> Option<&str> {
+    fn get_suggested_name(&self) -> Option<&str> {
         self.name
             .as_deref()
             .or_else(|| (self.file.as_os_str() != "-").then_some(self.file.file_name()?.to_str()?))

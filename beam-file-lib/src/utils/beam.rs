@@ -1,10 +1,12 @@
 use anyhow::Context;
-use futures_util::{Stream, StreamExt};
 use beam_lib::{BeamClient, BlockingOptions, SocketTask};
+use futures_util::{Stream, StreamExt};
 use once_cell::sync::Lazy;
 use reqwest::Upgraded;
 
-pub fn stream_tasks(beam_client: &BeamClient) -> impl Stream<Item = anyhow::Result<SocketTask>> {
+pub fn stream_tasks(
+    beam_client: &BeamClient,
+) -> impl Stream<Item = anyhow::Result<SocketTask>> + use<'_> {
     static BLOCK: Lazy<BlockingOptions> = Lazy::new(|| BlockingOptions::from_count(1));
     futures_util::stream::repeat_with(move || beam_client.get_socket_tasks(&BLOCK)).filter_map(
         |v| async {
@@ -18,7 +20,10 @@ pub fn stream_tasks(beam_client: &BeamClient) -> impl Stream<Item = anyhow::Resu
     )
 }
 
-pub async fn connect_socket(socket_task: SocketTask, beam_client: &BeamClient) -> anyhow::Result<(SocketTask, Upgraded)> {
+pub async fn connect_socket(
+    socket_task: SocketTask,
+    beam_client: &BeamClient,
+) -> anyhow::Result<(SocketTask, Upgraded)> {
     let id = socket_task.id;
     Ok((
         socket_task,

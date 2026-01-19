@@ -1,7 +1,7 @@
-use std::path::PathBuf;
 use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::path::PathBuf;
 
 #[derive(Debug, Clone, Default)]
 pub struct SendSpec {
@@ -38,14 +38,19 @@ impl SendSpec {
 }
 
 pub fn validate_filename(name: &str) -> anyhow::Result<&str> {
-    if name.chars().all(|c| c.is_alphanumeric() || ['_', '.', '-'].contains(&c)) {
+    if name
+        .chars()
+        .all(|c| c.is_alphanumeric() || ['_', '.', '-'].contains(&c))
+    {
         Ok(name)
     } else {
         Err(anyhow!("Invalid filename: {name}"))
     }
 }
 
-fn deserialize_filename<'de, D: serde::Deserializer<'de>>(deserializer: D) -> Result<Option<String>, D::Error> {
+fn deserialize_filename<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> Result<Option<String>, D::Error> {
     let s = Option::<String>::deserialize(deserializer)?;
     if let Some(ref f) = s {
         validate_filename(f).map_err(serde::de::Error::custom)?;

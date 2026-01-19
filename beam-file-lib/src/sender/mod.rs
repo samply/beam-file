@@ -1,6 +1,6 @@
+use crate::utils::config::SendSpec;
 use beam_lib::{AppId, BeamClient};
 use tokio::io::AsyncRead;
-use crate::utils::config::SendSpec;
 
 pub async fn send_file(
     beam_client: &BeamClient,

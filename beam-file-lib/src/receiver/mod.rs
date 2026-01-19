@@ -1,4 +1,4 @@
-
+use crate::utils::config::FileMeta;
 use anyhow::{bail, Context};
 use beam_lib::SocketTask;
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
@@ -9,7 +9,6 @@ use sync_wrapper::SyncStream;
 use tokio::io::AsyncRead;
 use tokio_util::io::ReaderStream;
 use tracing::info;
-use crate::utils::config::FileMeta;
 
 pub async fn save_file(
     dir: &Path,

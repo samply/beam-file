@@ -6,7 +6,7 @@ services:
       - HTTP_PORT=80
 
   uploader:
-    build: .
+    build: beam-file
     image: samply/beam-file
     container_name: sender
     environment:
@@ -22,7 +22,7 @@ services:
       - default
   
   downloader:
-    build: .
+    build: beam-file
     image: samply/beam-file
     container_name: receiver
     environment:
