@@ -95,7 +95,31 @@ Options:
       --callback <CALLBACK>        A url to an endpoint that will be called when we are receiving a new file [env: CALLBACK=]
   -h, --help                       Print help
 ```
+## Server Option
+```
+services:
+  uploader:
+    build:
+    image: samply/beam-file
+    container_name: sender_server
+    command: ["receive", "save", "-o", "/data", "-p", "%f_%t_%n"]
+    volumes:
+      - ./data:/data
+    environment:
+      - BEAM_ID=app1.proxy1.broker
+      - BEAM_SECRET=App1Secret
+      - BEAM_URL=http://proxy1:8081
+      - BIND_ADDR=0.0.0.0:8085
+      - API_KEY=SuperSecretApiKey
+    ports:
+      - 8085:8085
+    networks:
+      - dev_default
+      - default
 
+volumes:
+  data:
+```
 The only interseting configuration that is not beam related is the callback url which may be specified by the site that wants to receive the uploaded data. It can be any endpoint and will be called by this application as a post request relaying the body and content related headers as uploaded by the other site.
 
 For further documentation about the beam related options see the [beam repositroy](https://github.com/samply/beam).
